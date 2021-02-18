@@ -15,11 +15,6 @@ var addr = flag.String("addr", "192.168.0.28:8080", "http service address")
 
 var upgrader = websocket.Upgrader{}
 
-type Coordinates struct {
-	x int
-	y int
-}
-
 func recieveCommand(w http.ResponseWriter, r *http.Request) {
 	log.Printf("Connection")
 
@@ -30,25 +25,29 @@ func recieveCommand(w http.ResponseWriter, r *http.Request) {
 	}
 	defer c.Close()
 	for {
-		mt, msg, err := c.ReadMessage()
-		message := string(msg)
-		coords := strings.Split(message, " ")
+		_, msg, err := c.ReadMessage()
+		command := strings.Split(string(msg), " ")
 		if err != nil {
 			log.Println("Read: ", err)
 			break
 		}
-		log.Printf("%s", message)
-		log.Printf(coords[0])
-		log.Printf(coords[1])
-		cx, err := strconv.Atoi(coords[0])
-		cy, err := strconv.Atoi(coords[1])
-		log.Printf("mt: %s", mt)
-		x, y := robotgo.GetMousePos()
-		robotgo.MoveMouse(x + cx, y + cy)
+		log.Printf("%s", msg)
+		switch command[0] {
+		case "MOVE_MOUSE":
+			x0, _ := strconv.Atoi(command[1])
+			y0, _ := strconv.Atoi(command[2])
+			x0 = x0/5
+			y0 = y0/5
+			x, y := robotgo.GetMousePos()
+			robotgo.MoveMouse(x + x0, y + y0)
+		case "LEFT_CLICK":
+			robotgo.MouseClick()
+		}
 	}
 }
 
 func main() {
+	log.Printf("Starting Server")
 	flag.Parse()
 	log.SetFlags(0)
 	http.HandleFunc("/", recieveCommand)
